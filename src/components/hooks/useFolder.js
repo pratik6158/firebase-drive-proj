@@ -6,6 +6,7 @@ const ACTION = {
     SELECT_FOLDER: "select-folder",
     UPDATE_FOLDER: "update-folder",
     SET_CHILD_FOLDERS: "set-child-folders",
+    SET_CHILD_FILES: "set-child-files",
 };
 
 export const ROOT_FOLDER = { name: "Root", id: null, path: [] };
@@ -30,6 +31,12 @@ function reducer(state, { type, payload }) {
                 ...state,
                 childFolders: payload.childFolders,
             };
+        case ACTION.SET_CHILD_FILES:
+            // console.log("helo", payload.childFolders);
+            return {
+                ...state,
+                childFiles: payload.childFiles,
+            };
         default:
             return state;
     }
@@ -44,7 +51,7 @@ export function useFolder(folderId = null, folder = null) {
         folderId,
         folder,
         childFolders: [],
-        childFile: [],
+        childFiles: [],
     });
     useEffect(() => {
         dispatch({
@@ -91,7 +98,6 @@ export function useFolder(folderId = null, folder = null) {
             .where("userId", "==", currentUser.uid)
             .orderBy("createdAt")
             .onSnapshot((snapshot) => {
-                // console.log("hello", snapshot.docs.map(database.formatDoc));
                 dispatch({
                     type: ACTION.SET_CHILD_FOLDERS,
                     payload: {
@@ -99,6 +105,25 @@ export function useFolder(folderId = null, folder = null) {
                         //     database.formatDoc(each)
                         // ),
                         childFolders: snapshot.docs.map(database.formatDoc), // ye maybe wrong hei
+                    },
+                });
+            });
+        return cleanup;
+    }, [folderId, currentUser]);
+
+    useEffect(() => {
+        const cleanup = database.files
+            .where("folderId", "==", folderId)
+            .where("userId", "==", currentUser.uid)
+            // .orderBy("createdAt")
+            .onSnapshot((snapshot) => {
+                dispatch({
+                    type: ACTION.SET_CHILD_FILES,
+                    payload: {
+                        // childFolders: snapshot.doc.map((each) =>
+                        //     database.formatDoc(each)
+                        // ),
+                        childFiles: snapshot.docs.map(database.formatDoc), // ye maybe wrong hei
                     },
                 });
             });

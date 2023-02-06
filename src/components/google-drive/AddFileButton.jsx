@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
+import { ReactDOM } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
-import { storage } from "../../firebase";
+import { storage, database } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { ROOT_FOLDER } from "../hooks/useFolder";
+import { nanoid } from "nanoid";
 
 const AddFileButton = ({ currentFolder }) => {
     const { currentUser } = useAuth();
@@ -12,6 +14,7 @@ const AddFileButton = ({ currentFolder }) => {
         const file = e.target.files[0];
         if (currentFolder == null || file == null) return;
         console.log(currentFolder);
+
         var parentPath = "";
         if (currentFolder.path.length > 0) {
             parentPath = `${currentFolder.path
@@ -31,7 +34,38 @@ const AddFileButton = ({ currentFolder }) => {
         const uploadTask = storage
             .ref(`/files/${currentUser.uid}/${filePath}`)
             .put(file);
+
+        uploadTask.on(
+            "state-changed",
+            (snapshot) => {},
+            () => {},
+            () => {
+                uploadTask.snapshot.ref.getDownloadURL().then((url) => {
+                    database.files
+                        .where("name", "==", file.name)
+                        .where("userId", "==", currentUser.uid)
+                        .where("folderId", "==", currentFolder.id)
+                        .get()
+                        .then((existingFiles) => {
+                            const existingFile = existingFiles.docs[0];
+                            if (existingFile) {
+                                existingFile.ref.update({ url: url });
+                            } else {
+                                database.files.add({
+                                    url: url,
+                                    name: file.name,
+                                    createdAt: database.getCurrentTimeStamp(),
+                                    folderId: currentFolder.id,
+                                    userId: currentUser.uid,
+                                });
+                            }
+                        });
+                    console.log(url);
+                });
+            }
+        );
     }
+
     return (
         <>
             <label className="btn btn-outline-success m-2 ">
